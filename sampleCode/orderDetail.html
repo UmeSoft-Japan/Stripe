@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<header></header>
+<div>
+    <a onclick="payOrder()" title="支払いへ">支払いへ</a>
+    <a onclick="cancelOrder()" title="キャンセル">キャンセル</a>
+</div>
+
+<script type="text/javascript">
+    /**
+     * 支払いボタン押下時の処理
+     */
+    function payOrder() {
+
+        //Stripeオブジェクトを初期化（公開鍵を設定）
+        //公開鍵（pk_test_yourPublicKey）はプロジェクトに応じて置き換える必要あり
+        const stripe = Stripe("pk_test_yourPublicKey");
+
+        //支払いデータをバックエンドに送信
+        fetch("/create-payment", {
+            method: "POST", //メソッド指定
+            headers: {
+                "Content-Type": "application/json" //ヘッダーをJSON形式に設定
+            },
+            body: JSON.stringify({ orderNo: orderNo, products: products }) //データをJSON形式で送信
+        })
+            .then(response => response.json())  //レスポンスをJSON形式に変換
+            .then(session => {
+                //Stripeの支払い画面にリダイレクト
+                return stripe.redirectToCheckout({ sessionId: session.id });
+            })
+            .then(result => {
+                //リダイレクトエラーが発生した場合にエラーメッセージを表示
+                if (result.error) alert(result.error.message);
+            });
+    }
+
+    /**
+     * キャンセルボタン押下時の処理（返金処理）
+     */
+    function cancelOrder() {
+        //注文番号を取得
+        var orderNo = $("#orderNoValue").val();
+
+        //注文キャンセルリクエストをバックエンドに送信
+        $.ajax({
+            type: 'PUT', //メソッドをPUTに指定
+            url: '/orders/' + orderNo + '/cancel', //キャンセルAPIのエンドポイント
+            success: function (result) {
+                if (result.resultCode == 200) {
+                    //キャンセル成功時に画面をリロード
+                    window.location.reload();
+                } else {
+                    //キャンセル失敗時にエラーメッセージを表示
+                    alert(result.error.message);
+                }
+            },
+            error: function () {
+                //API通信エラー時にエラーメッセージを表示
+                alert(result.error.message);
+            }
+        });
+    }
+</script>
+</body>
+</html>
